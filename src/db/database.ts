@@ -318,7 +318,7 @@ export function setState(key: string, value: string) {
 // Removes everything stored on this phone (the cloud copy is untouched)
 export function clearLocal() {
   db.execSync(
-    "DELETE FROM messages; DELETE FROM events; DELETE FROM sync_state;",
+    "DELETE FROM messages; DELETE FROM events; DELETE FROM sync_state WHERE key NOT LIKE 'pref:%';"
   );
 }
 

@@ -1,12 +1,3 @@
-import {
-  AudioModule,
-  RecordingPresets,
-  setAudioModeAsync,
-  useAudioPlayer,
-  useAudioRecorder,
-} from "expo-audio";
-import * as ImagePicker from "expo-image-picker";
-import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Alert,
@@ -21,7 +12,16 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../constants/theme";
+import * as ImagePicker from "expo-image-picker";
+import { router, useFocusEffect } from "expo-router";
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioRecorder,
+} from "expo-audio";
+import { Theme } from "../constants/themes";
 import {
   addMedia,
   addMessage,
@@ -41,19 +41,27 @@ import {
 import { supabase } from "../db/supabase";
 import {
   deleteCloudMedia,
-  deleteMyAccount,
   getSyncReport,
   hasUploadProblems,
   syncNow,
 } from "../db/sync";
+import { dayKey, formatDay, formatTime } from "../lib/time";
+import { useTheme } from "../theme/ThemeProvider";
+
+function useStyles() {
+  const { theme } = useTheme();
+  return { theme, styles: makeStyles(theme) };
+}
 
 type VoiceProps = {
   file: string;
   pinned: boolean;
+  time: string;
   onLongPress: () => void;
 };
 
-function VoicePlayer({ file, pinned, onLongPress }: VoiceProps) {
+function VoicePlayer({ file, pinned, time, onLongPress }: VoiceProps) {
+  const { styles } = useStyles();
   const player = useAudioPlayer(mediaUri(file));
   return (
     <Pressable
@@ -64,16 +72,21 @@ function VoicePlayer({ file, pinned, onLongPress }: VoiceProps) {
       onLongPress={onLongPress}
       style={styles.bubble}
     >
-      <Text style={styles.bubbleText}>{pinned ? "📌 " : ""}▶ Voice note</Text>
+      <Text style={styles.bubbleText}>
+        {pinned ? "📌 " : ""}▶  Voice note
+      </Text>
+      <Text style={styles.time}>{time}</Text>
     </Pressable>
   );
 }
 
 function VoiceNote(props: VoiceProps) {
+  const { styles } = useStyles();
   if (!mediaExists(props.file)) {
     return (
       <View style={styles.bubble}>
         <Text style={styles.bubbleText}>Downloading voice note…</Text>
+        <Text style={styles.time}>{props.time}</Text>
       </View>
     );
   }
@@ -81,6 +94,7 @@ function VoiceNote(props: VoiceProps) {
 }
 
 export default function Chat() {
+  const { theme, styles } = useStyles();
   const [messages, setMessages] = useState<Message[]>(() => getMessages());
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
@@ -98,7 +112,7 @@ export default function Chat() {
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, []),
+    }, [])
   );
 
   function send() {
@@ -118,7 +132,7 @@ export default function Chat() {
           setMessages(getMessages());
           Alert.alert(
             "Sync report",
-            getSyncReport() || "Sync didn't run. Are you signed in and online?",
+            getSyncReport() || "Sync didn't run. Are you signed in and online?"
           );
         },
       },
@@ -130,7 +144,7 @@ export default function Chat() {
           if (!ok || hasUploadProblems()) {
             Alert.alert(
               "Not everything is backed up yet",
-              "Some files haven't uploaded, so nothing was cleared. Tap Sync now to see why.",
+              "Some files haven't uploaded, so nothing was cleared. Tap Sync now to see why."
             );
             return;
           }
@@ -141,28 +155,6 @@ export default function Chat() {
         },
       },
       { text: "Sign out", onPress: () => supabase.auth.signOut() },
-      {
-        text: "Delete account",
-        style: "destructive",
-        onPress: () =>
-          Alert.alert(
-            "Delete your account?",
-            "This permanently deletes your account and all your messages, photos, voice notes, drawings and events, from the cloud and from this phone. It can't be undone.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Delete forever",
-                style: "destructive",
-                onPress: async () => {
-                  const problem = await deleteMyAccount();
-                  if (problem) {
-                    Alert.alert("Couldn't delete the account", problem);
-                  }
-                },
-              },
-            ],
-          ),
-      },
       { text: "Cancel", style: "cancel" },
     ]);
   }
@@ -236,7 +228,7 @@ export default function Chat() {
     if (!perm.granted) {
       Alert.alert(
         "Microphone access needed",
-        "Allow microphone access in Settings.",
+        "Allow microphone access in Settings."
       );
       return;
     }
@@ -246,47 +238,70 @@ export default function Chat() {
     setRecording(true);
   }
 
-  function renderItem({ item }: { item: Message }) {
+  function renderBubble(item: Message) {
+    const time = formatTime(item.created_at);
+
     if ((item.type === "photo" || item.type === "drawing") && item.file) {
       const file = item.file;
       const present = mediaExists(file);
       return (
-        <Pressable
-          onPress={() => {
-            if (present) {
-              router.push({ pathname: "/draw", params: { photo: file } });
-            }
-          }}
-          onLongPress={() => pin(item.id)}
-          style={styles.photoWrap}
-        >
-          {present ? (
-            <Image source={{ uri: mediaUri(file) }} style={styles.photo} />
-          ) : (
-            <View style={[styles.photo, styles.photoLoading]}>
-              <Text style={styles.bubbleText}>Downloading…</Text>
-            </View>
-          )}
-          {item.pinned ? <Text style={styles.pinBadge}>📌</Text> : null}
-        </Pressable>
+        <View style={styles.photoWrap}>
+          <Pressable
+            onPress={() => {
+              if (present) {
+                router.push({ pathname: "/draw", params: { photo: file } });
+              }
+            }}
+            onLongPress={() => pin(item.id)}
+          >
+            {present ? (
+              <Image source={{ uri: mediaUri(file) }} style={styles.photo} />
+            ) : (
+              <View style={[styles.photo, styles.photoLoading]}>
+                <Text style={styles.bubbleText}>Downloading…</Text>
+              </View>
+            )}
+            {item.pinned ? <Text style={styles.pinBadge}>📌</Text> : null}
+          </Pressable>
+          <Text style={styles.photoTime}>{time}</Text>
+        </View>
       );
     }
+
     if (item.type === "voice" && item.file) {
       return (
         <VoiceNote
           file={item.file}
           pinned={!!item.pinned}
+          time={time}
           onLongPress={() => pin(item.id)}
         />
       );
     }
+
     return (
       <Pressable style={styles.bubble} onLongPress={() => pin(item.id)}>
         <Text style={styles.bubbleText}>
           {item.pinned ? "📌 " : ""}
           {item.text}
         </Text>
+        <Text style={styles.time}>{time}</Text>
       </Pressable>
+    );
+  }
+
+  function renderItem({ item, index }: { item: Message; index: number }) {
+    // The list is upside down, so the next item is the older message
+    const older = messages[index + 1];
+    const showDay =
+      !older || dayKey(older.created_at) !== dayKey(item.created_at);
+    return (
+      <View>
+        {showDay ? (
+          <Text style={styles.dayHeader}>{formatDay(item.created_at)}</Text>
+        ) : null}
+        {renderBubble(item)}
+      </View>
     );
   }
 
@@ -300,6 +315,9 @@ export default function Chat() {
           <Text style={styles.title}>Fobi</Text>
           <Pressable onPress={() => router.push("/calendar")}>
             <Text style={styles.icon}>📅</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push("/settings")}>
+            <Text style={styles.icon}>🎨</Text>
           </Pressable>
           <Pressable onPress={account}>
             <Text style={styles.icon}>👤</Text>
@@ -321,10 +339,7 @@ export default function Chat() {
           <Pressable style={styles.iconBtn} onPress={pickPhoto}>
             <Text style={styles.icon}>🖼️</Text>
           </Pressable>
-          <Pressable
-            style={styles.iconBtn}
-            onPress={() => router.push("/draw")}
-          >
+          <Pressable style={styles.iconBtn} onPress={() => router.push("/draw")}>
             <Text style={styles.icon}>✏️</Text>
           </Pressable>
           <TextInput
@@ -332,7 +347,7 @@ export default function Chat() {
             value={text}
             onChangeText={setText}
             placeholder={recording ? "Recording..." : "Write to yourself..."}
-            placeholderTextColor={colors.navy + "99"}
+            placeholderTextColor={theme.muted}
             multiline
           />
           {text.trim() ? (
@@ -343,12 +358,15 @@ export default function Chat() {
             <Pressable
               style={[
                 styles.sendBtn,
-                recording && { backgroundColor: colors.mustard },
+                recording && { backgroundColor: theme.highlight },
               ]}
               onPress={toggleRecord}
             >
               <Text
-                style={[styles.sendText, recording && { color: colors.navy }]}
+                style={[
+                  styles.sendText,
+                  recording && { color: theme.onHighlight },
+                ]}
               >
                 {recording ? "Stop" : "🎤"}
               </Text>
@@ -360,64 +378,91 @@ export default function Chat() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
-  header: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: "Fraunces_900Black",
-    color: colors.navy,
-  },
-  bubble: {
-    alignSelf: "flex-end",
-    maxWidth: "80%",
-    backgroundColor: colors.blue,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 8,
-  },
-  bubbleText: { color: colors.navy, fontSize: 16 },
-  photoWrap: { alignSelf: "flex-end", marginBottom: 8 },
-  photo: {
-    width: 220,
-    height: 220,
-    borderRadius: 18,
-    backgroundColor: colors.blue,
-  },
-  photoLoading: { alignItems: "center", justifyContent: "center" },
-  pinBadge: { position: "absolute", top: 8, right: 8, fontSize: 20 },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    padding: 12,
-    backgroundColor: colors.butter,
-  },
-  iconBtn: { paddingVertical: 8 },
-  icon: { fontSize: 24 },
-  input: {
-    flex: 1,
-    maxHeight: 120,
-    backgroundColor: colors.cream,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: colors.navy,
-  },
-  sendBtn: {
-    backgroundColor: colors.navy,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  sendText: { color: colors.cream, fontWeight: "700" },
-});
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    header: {
+      flexDirection: "row",
+      justifyContent: "flex-start",
+      alignItems: "center",
+      gap: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    title: {
+      fontSize: 28,
+      fontFamily: "Fraunces_900Black",
+      color: t.text,
+    },
+    dayHeader: {
+      alignSelf: "center",
+      backgroundColor: t.bar,
+      color: t.text,
+      fontSize: 12,
+      fontWeight: "700",
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      overflow: "hidden",
+      marginVertical: 10,
+    },
+    bubble: {
+      alignSelf: "flex-end",
+      maxWidth: "80%",
+      backgroundColor: t.bubble,
+      borderRadius: 18,
+      paddingHorizontal: 14,
+      paddingTop: 10,
+      paddingBottom: 6,
+      marginBottom: 8,
+    },
+    bubbleText: { color: t.onBubble, fontSize: 16 },
+    time: {
+      color: t.onBubble,
+      opacity: 0.6,
+      fontSize: 11,
+      alignSelf: "flex-end",
+      marginTop: 3,
+    },
+    photoWrap: {
+      alignSelf: "flex-end",
+      alignItems: "flex-end",
+      marginBottom: 8,
+    },
+    photo: {
+      width: 220,
+      height: 220,
+      borderRadius: 18,
+      backgroundColor: t.bubble,
+    },
+    photoLoading: { alignItems: "center", justifyContent: "center" },
+    photoTime: { color: t.muted, fontSize: 11, marginTop: 3 },
+    pinBadge: { position: "absolute", top: 8, right: 8, fontSize: 20 },
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      gap: 8,
+      padding: 12,
+      backgroundColor: t.bar,
+    },
+    iconBtn: { paddingVertical: 8 },
+    icon: { fontSize: 24 },
+    input: {
+      flex: 1,
+      maxHeight: 120,
+      backgroundColor: t.card,
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: t.text,
+    },
+    sendBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 20,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+    },
+    sendText: { color: t.onAccent, fontWeight: "700" },
+  });
+}

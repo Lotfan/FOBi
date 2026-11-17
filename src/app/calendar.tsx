@@ -1,6 +1,5 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { syncNow } from "../db/sync";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../constants/theme";
+import { Theme } from "../constants/themes";
 import {
   addEvent,
   deleteEvent,
@@ -21,20 +20,12 @@ import {
   getPinned,
   Message,
 } from "../db/database";
+import { syncNow } from "../db/sync";
+import { useTheme } from "../theme/ThemeProvider";
 
 const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -50,6 +41,9 @@ function pinnedLabel(m: Message) {
 }
 
 export default function CalendarScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+
   const [now] = useState(() => new Date());
   const todayKey = dateKey(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -58,12 +52,13 @@ export default function CalendarScreen() {
   const [selected, setSelected] = useState(todayKey);
   const [events, setEvents] = useState<Event[]>(() => getEvents());
   const [pinned] = useState<Message[]>(() => getPinned());
-    useEffect(() => {
+  const [title, setTitle] = useState("");
+
+  useEffect(() => {
     syncNow().then((ok) => {
       if (ok) setEvents(getEvents());
     });
   }, []);
-  const [title, setTitle] = useState("");
 
   function shiftMonth(delta: number) {
     const d = new Date(year, month + delta, 1);
@@ -159,10 +154,7 @@ export default function CalendarScreen() {
                       ]}
                     >
                       <Text
-                        style={[
-                          styles.dayText,
-                          isSelected && styles.selectedText,
-                        ]}
+                        style={[styles.dayText, isSelected && styles.selectedText]}
                       >
                         {day}
                       </Text>
@@ -171,7 +163,7 @@ export default function CalendarScreen() {
                       style={[
                         styles.dot,
                         eventDates.has(key) && {
-                          backgroundColor: colors.mustard,
+                          backgroundColor: theme.highlight,
                         },
                       ]}
                     />
@@ -202,7 +194,7 @@ export default function CalendarScreen() {
               value={title}
               onChangeText={setTitle}
               placeholder="Add an event..."
-              placeholderTextColor={colors.navy + "99"}
+              placeholderTextColor={theme.muted}
               onSubmitEditing={add}
               returnKeyType="done"
             />
@@ -219,7 +211,7 @@ export default function CalendarScreen() {
           )}
           {pinned.map((m) => (
             <View key={m.id} style={styles.pinRow}>
-              <Text style={styles.eventText} numberOfLines={2}>
+              <Text style={styles.pinText} numberOfLines={2}>
                 {pinnedLabel(m)}
               </Text>
             </View>
@@ -230,96 +222,107 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: colors.butter,
-  },
-  title: { fontSize: 22, fontWeight: "900", color: colors.navy },
-  link: { fontSize: 17, fontWeight: "700", color: colors.navy, width: 60 },
-  monthRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  monthTitle: { fontSize: 22, fontWeight: "900", color: colors.navy },
-  arrow: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: colors.navy,
-    paddingHorizontal: 12,
-  },
-  weekRow: { flexDirection: "row" },
-  weekday: {
-    flex: 1,
-    textAlign: "center",
-    fontWeight: "700",
-    color: colors.navy + "99",
-    marginBottom: 6,
-  },
-  cell: { flex: 1, alignItems: "center", paddingVertical: 4, minHeight: 50 },
-  dayCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  today: { borderWidth: 2, borderColor: colors.navy },
-  selected: { backgroundColor: colors.navy },
-  dayText: { fontSize: 16, color: colors.navy, fontWeight: "600" },
-  selectedText: { color: colors.cream },
-  dot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
-  section: {
-    fontSize: 20,
-    fontFamily: "Fraunces_900Black",
-    color: colors.navy,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  empty: { color: colors.navy + "99", fontSize: 15 },
-  eventRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: colors.butter,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 8,
-  },
-  pinRow: {
-    backgroundColor: colors.blue,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 8,
-  },
-  eventText: { color: colors.navy, fontSize: 16, flexShrink: 1 },
-  remove: {
-    color: colors.navy,
-    fontSize: 18,
-    fontWeight: "700",
-    paddingLeft: 12,
-  },
-  addRow: { flexDirection: "row", gap: 8, marginTop: 8 },
-  input: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: colors.navy,
-  },
-  addBtn: {
-    backgroundColor: colors.navy,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    justifyContent: "center",
-  },
-  addText: { color: colors.cream, fontWeight: "700" },
-});
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    topBar: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      backgroundColor: t.bar,
+    },
+    title: { fontSize: 22, fontFamily: "Fraunces_900Black", color: t.text },
+    link: { fontSize: 17, fontWeight: "700", color: t.text, width: 60 },
+    monthRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    monthTitle: {
+      fontSize: 22,
+      fontFamily: "Fraunces_900Black",
+      color: t.text,
+    },
+    arrow: {
+      fontSize: 32,
+      fontWeight: "700",
+      color: t.text,
+      paddingHorizontal: 12,
+    },
+    weekRow: { flexDirection: "row" },
+    weekday: {
+      flex: 1,
+      textAlign: "center",
+      fontWeight: "700",
+      color: t.muted,
+      marginBottom: 6,
+    },
+    cell: { flex: 1, alignItems: "center", paddingVertical: 4, minHeight: 50 },
+    dayCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    today: { borderWidth: 2, borderColor: t.text },
+    selected: { backgroundColor: t.accent, borderWidth: 0 },
+    dayText: { fontSize: 16, color: t.text, fontWeight: "600" },
+    selectedText: { color: t.onAccent },
+    dot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
+    section: {
+      fontSize: 20,
+      fontFamily: "Fraunces_900Black",
+      color: t.text,
+      marginTop: 24,
+      marginBottom: 8,
+    },
+    empty: { color: t.muted, fontSize: 15 },
+    eventRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: t.bar,
+      borderWidth: 1,
+      borderColor: t.muted + "55",
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 8,
+    },
+    pinRow: {
+      backgroundColor: t.bubble,
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 8,
+    },
+    eventText: { color: t.text, fontSize: 16, flexShrink: 1 },
+    pinText: { color: t.onBubble, fontSize: 16 },
+    remove: {
+      color: t.text,
+      fontSize: 18,
+      fontWeight: "700",
+      paddingLeft: 12,
+    },
+    addRow: { flexDirection: "row", gap: 8, marginTop: 8 },
+    input: {
+      flex: 1,
+      backgroundColor: t.card,
+      borderWidth: 1,
+      borderColor: t.muted + "55",
+      borderRadius: 20,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: t.text,
+    },
+    addBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 20,
+      paddingHorizontal: 18,
+      justifyContent: "center",
+    },
+    addText: { color: t.onAccent, fontWeight: "700" },
+  });
+}

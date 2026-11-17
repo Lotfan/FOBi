@@ -7,7 +7,10 @@
     "icon": "./assets/images/icon.png",
     "scheme": "fobi",
     "userInterfaceStyle": "light",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "icon": "./assets/expo.icon",
       "supportsTablet": false,
@@ -50,7 +53,8 @@
           "microphonePermission": "Fobi uses the microphone to record voice notes."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,

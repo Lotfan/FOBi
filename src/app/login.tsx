@@ -10,10 +10,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../constants/theme";
+import { Theme } from "../constants/themes";
 import { supabase } from "../db/supabase";
+import { useTheme } from "../theme/ThemeProvider";
 
 export default function Login() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -65,7 +69,7 @@ export default function Login() {
                 value={email}
                 onChangeText={setEmail}
                 placeholder="you@gmail.com"
-                placeholderTextColor={colors.navy + "99"}
+                placeholderTextColor={theme.muted}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
@@ -78,13 +82,15 @@ export default function Login() {
             </>
           ) : (
             <>
-              <Text style={styles.label}>Enter the code we emailed to {email}</Text>
+              <Text style={styles.label}>
+                Enter the code we emailed to {email}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={code}
                 onChangeText={setCode}
                 placeholder="Code"
-                placeholderTextColor={colors.navy + "99"}
+                placeholderTextColor={theme.muted}
                 keyboardType="number-pad"
                 autoFocus
               />
@@ -104,47 +110,51 @@ export default function Login() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.butter },
-  center: { flex: 1, justifyContent: "center", padding: 24 },
-  logo: {
-    fontSize: 56,
-    fontFamily: "Fraunces_900Black",
-    color: colors.navy,
-    textAlign: "center",
-  },
-  tagline: {
-    fontSize: 17,
-    color: colors.navy,
-    textAlign: "center",
-    marginBottom: 32,
-  },
-  card: {
-    backgroundColor: colors.cream,
-    borderRadius: 24,
-    padding: 20,
-    gap: 14,
-  },
-  label: { fontSize: 16, fontWeight: "700", color: colors.navy },
-  input: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 17,
-    color: colors.navy,
-  },
-  btn: {
-    backgroundColor: colors.navy,
-    borderRadius: 24,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  btnText: { color: colors.cream, fontSize: 17, fontWeight: "800" },
-  link: {
-    color: colors.navy,
-    fontWeight: "700",
-    textAlign: "center",
-    textDecorationLine: "underline",
-  },
-});
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bar },
+    center: { flex: 1, justifyContent: "center", padding: 24 },
+    logo: {
+      fontSize: 56,
+      fontFamily: "Fraunces_900Black",
+      color: t.text,
+      textAlign: "center",
+    },
+    tagline: {
+      fontSize: 17,
+      color: t.text,
+      textAlign: "center",
+      marginBottom: 32,
+    },
+    card: {
+      backgroundColor: t.bg,
+      borderRadius: 24,
+      padding: 20,
+      gap: 14,
+    },
+    label: { fontSize: 16, fontWeight: "700", color: t.text },
+    input: {
+      backgroundColor: t.card,
+      borderWidth: 1,
+      borderColor: t.muted + "55",
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      fontSize: 17,
+      color: t.text,
+    },
+    btn: {
+      backgroundColor: t.accent,
+      borderRadius: 24,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    btnText: { color: t.onAccent, fontSize: 17, fontWeight: "800" },
+    link: {
+      color: t.text,
+      fontWeight: "700",
+      textAlign: "center",
+      textDecorationLine: "underline",
+    },
+  });
+}

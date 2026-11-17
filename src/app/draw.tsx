@@ -10,20 +10,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "../constants/theme";
+import { Theme } from "../constants/themes";
 import { addMedia } from "../db/database";
 import { mediaUri, saveBytes } from "../db/media";
+import { useTheme } from "../theme/ThemeProvider";
 
 type Point = { x: number; y: number };
 type Stroke = { points: Point[]; color: string; width: number };
 
-const PALETTE = [
-  colors.navy,
-  colors.blue,
-  colors.mustard,
-  "#D9534F",
-  "#4F9D69",
-];
 const SIZES = [3, 8, 16];
 
 // Turns a list of finger positions into a path written as text
@@ -37,6 +31,9 @@ function buildPath(points: Point[]) {
 }
 
 export default function Draw() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+
   // If we were opened from a photo, "photo" holds its file name
   const { photo } = useLocalSearchParams<{ photo?: string }>();
   const background = useImage(photo ? mediaUri(photo) : null);
@@ -44,8 +41,18 @@ export default function Draw() {
   const canvasRef = useCanvasRef();
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [color, setColor] = useState(colors.navy);
+  const [color, setColor] = useState(theme.text);
   const [width, setWidth] = useState(SIZES[1]);
+
+  // Ink colours: two from the theme, plus a few that work on any background
+  const palette = [
+    theme.text,
+    theme.accent,
+    "#D9534F",
+    "#E6A23C",
+    "#4F9D69",
+    "#4A78C8",
+  ];
 
   function save() {
     if (strokes.length === 0) {
@@ -95,7 +102,7 @@ export default function Draw() {
         }}
       >
         <Canvas ref={canvasRef} style={{ flex: 1 }} pointerEvents="none">
-          <Fill color={colors.cream} />
+          <Fill color={theme.bg} />
           {background && (
             <SkiaImage
               image={background}
@@ -122,7 +129,7 @@ export default function Draw() {
 
       <View style={styles.toolbar}>
         <View style={styles.row}>
-          {PALETTE.map((c) => (
+          {palette.map((c) => (
             <Pressable
               key={c}
               onPress={() => setColor(c)}
@@ -146,7 +153,7 @@ export default function Draw() {
                   width: s + 4,
                   height: s + 4,
                   borderRadius: 20,
-                  backgroundColor: colors.navy,
+                  backgroundColor: theme.text,
                 }}
               />
             </Pressable>
@@ -166,40 +173,42 @@ export default function Draw() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.butter },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-  },
-  title: { fontSize: 22, fontWeight: "900", color: colors.navy },
-  link: { fontSize: 17, fontWeight: "700", color: colors.navy },
-  canvasWrap: {
-    flex: 1,
-    marginHorizontal: 12,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: colors.cream,
-  },
-  toolbar: { padding: 16, gap: 14 },
-  row: { flexDirection: "row", alignItems: "center", gap: 16 },
-  swatch: { width: 34, height: 34, borderRadius: 17 },
-  swatchActive: { borderWidth: 3, borderColor: colors.cream },
-  sizeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sizeBtnActive: { backgroundColor: colors.cream },
-  saveBtn: {
-    backgroundColor: colors.navy,
-    borderRadius: 24,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  saveText: { color: colors.cream, fontSize: 17, fontFamily: "Fraunces_900Black" },
-});
+function makeStyles(t: Theme) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bar },
+    topBar: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+    },
+    title: { fontSize: 22, fontFamily: "Fraunces_900Black", color: t.text },
+    link: { fontSize: 17, fontWeight: "700", color: t.text },
+    canvasWrap: {
+      flex: 1,
+      marginHorizontal: 12,
+      borderRadius: 20,
+      overflow: "hidden",
+      backgroundColor: t.bg,
+    },
+    toolbar: { padding: 16, gap: 14 },
+    row: { flexDirection: "row", alignItems: "center", gap: 16 },
+    swatch: { width: 34, height: 34, borderRadius: 17 },
+    swatchActive: { borderWidth: 3, borderColor: t.bg },
+    sizeBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    sizeBtnActive: { backgroundColor: t.bg },
+    saveBtn: {
+      backgroundColor: t.accent,
+      borderRadius: 24,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    saveText: { color: t.onAccent, fontSize: 17, fontWeight: "800" },
+  });
+}
